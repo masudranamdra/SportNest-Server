@@ -19,7 +19,7 @@ const verifySignedCookie = (cookieValue) => {
   const expected = crypto
     .createHmac('sha256', process.env.BETTER_AUTH_SECRET)
     .update(token)
-    .digest('base64url');
+    .digest('base64');
 
   const signatureBuffer = Buffer.from(signature);
   const expectedBuffer = Buffer.from(expected);
@@ -31,10 +31,18 @@ const verifySignedCookie = (cookieValue) => {
 
 const protect = async (req, res, next) => {
   try {
+    console.log('--- AUTH DEBUG ---');
+    console.log('Original Cookies:', req.headers.cookie);
+    console.log('Parsed Cookies:', req.cookies);
+
     const signedSessionCookie = getSessionCookie(req.cookies);
+    console.log('Extracted Session Cookie:', signedSessionCookie);
+    
     const sessionToken = verifySignedCookie(signedSessionCookie);
+    console.log('Verified Session Token:', sessionToken);
     
     if (!sessionToken) {
+      console.log('Auth Failed: No session token or invalid signature');
       return res.status(401).json({
         success: false,
         message: 'Not authorized, login required',
@@ -50,8 +58,10 @@ const protect = async (req, res, next) => {
 
     const Session = mongoose.connection.db.collection('session');
     const session = await Session.findOne({ token: sessionToken });
+    console.log('DB Session Query Result:', session ? 'Found' : 'Not Found');
     
     if (!session) {
+      console.log('Auth Failed: Session not found in database');
       return res.status(401).json({
         success: false,
         message: 'Session not found or invalid',
@@ -59,6 +69,7 @@ const protect = async (req, res, next) => {
     }
 
     if (new Date(session.expiresAt) < new Date()) {
+      console.log('Auth Failed: Session expired');
       return res.status(401).json({
         success: false,
         message: 'Session has expired',
@@ -66,8 +77,10 @@ const protect = async (req, res, next) => {
     }
 
     const user = await User.findById(session.userId).select('-password');
+    console.log('DB User Query Result:', user ? 'Found' : 'Not Found');
     
     if (!user) {
+      console.log('Auth Failed: User not found in database');
       return res.status(404).json({
         success: false,
         message: 'User not found',

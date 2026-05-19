@@ -19,7 +19,7 @@ const verifySignedCookie = (cookieValue) => {
   const expected = crypto
     .createHmac('sha256', process.env.BETTER_AUTH_SECRET)
     .update(token)
-    .digest('base64');
+    .digest('base64url');
 
   const signatureBuffer = Buffer.from(signature);
   const expectedBuffer = Buffer.from(expected);

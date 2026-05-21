@@ -5,11 +5,15 @@ const cookieParser = require('cookie-parser');
 const connectDB = require('./config/db');
 const { errorHandler } = require('./middleware/errorMiddleware');
 
+// Initialize DB connection for serverless environments
+// This will reuse existing connections automatically through Mongoose pooling
 connectDB();
 
 const app = express();
 app.set('trust proxy', 1);
 
+// CORS configuration for Vercel deployment
+// Accepts frontend URL from environment, defaults to localhost for development
 const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:3000')
   .split(',')
   .map((origin) => origin.trim())
@@ -106,12 +110,19 @@ app.use((req, res) => {
 
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 5000;
-const server = app.listen(PORT, () => {
-  console.log(`Server is running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
-});
+// Export app for Vercel serverless functions
+module.exports = app;
 
-process.on('unhandledRejection', (error) => {
-  console.error(`Unhandled rejection: ${error.message}`);
-  server.close(() => process.exit(1));
-});
+// Only listen to port in local development mode
+// Vercel automatically handles the server startup for serverless functions
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 5000;
+  const server = app.listen(PORT, () => {
+    console.log(`Server is running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+  });
+
+  process.on('unhandledRejection', (error) => {
+    console.error(`Unhandled rejection: ${error.message}`);
+    server.close(() => process.exit(1));
+  });
+}

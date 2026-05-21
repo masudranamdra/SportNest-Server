@@ -35,6 +35,7 @@ const errorHandler = (err, req, res, next) => {
     message = 'Not authorized, token expired';
   }
 
+  // Only log errors in development to avoid cluttering production logs
   if (process.env.NODE_ENV !== 'production') {
     console.error(`Error: ${message}`);
   }
@@ -44,6 +45,7 @@ const errorHandler = (err, req, res, next) => {
     message,
   };
 
+  // Only include stack trace in development
   if (process.env.NODE_ENV !== 'production' && err.stack) {
     payload.stack = err.stack;
   }
@@ -54,5 +56,11 @@ const errorHandler = (err, req, res, next) => {
 
   return res.status(statusCode).json(payload);
 };
+
+  if (Object.keys(errors).length > 0) {
+    payload.errors = errors;
+  }
+
+  return res.status(statusCode).json(payload);
 
 module.exports = { errorHandler };
